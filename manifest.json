@@ -2,7 +2,7 @@
   "required_api_version": "^2.0.0",
   "name": "KeePassXC Search",
   "description": "Quickly search your KeePassXC password manager database",
-  "developer_name": "Peter Bakhirev",
+  "developer_name": "afkdev8",
   "icon": "images/keepassxc-search.svg",
   "options": {
     "query_debounce": 0.2
