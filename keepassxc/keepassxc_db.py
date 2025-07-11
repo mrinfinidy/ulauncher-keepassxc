@@ -81,12 +81,16 @@ class KeepassxcDatabase:
         # Set key file path if provided
         if key_file_path:
             expanded_key_file_path = os.path.expanduser(key_file_path)
+            print(f"DEBUG: Checking key file path: {expanded_key_file_path}")
             if os.path.exists(expanded_key_file_path):
                 self.key_file_path = expanded_key_file_path
+                print(f"DEBUG: Key file found and set: {self.key_file_path}")
             else:
+                print(f"DEBUG: Key file not found: {expanded_key_file_path}")
                 raise KeepassxcFileNotFoundError(f"Key file not found: {expanded_key_file_path}")
         else:
             self.key_file_path = None
+            print(f"DEBUG: No key file specified")
 
     def change_path(self, new_path: str) -> None:
         """
@@ -190,11 +194,13 @@ class KeepassxcDatabase:
         """
         cli_args = [self.cli]
         
-        # Add key file parameter if available
+        # Add key file parameter if available - try as command option
         if self.key_file_path:
-            cli_args.extend(["-k", self.key_file_path])
-        
-        cli_args.extend(args)
+            cli_args.extend(args[:1])  # Add the command (e.g., "ls")
+            cli_args.extend(["-k", self.key_file_path])  # Add key file parameter
+            cli_args.extend(args[1:])  # Add remaining arguments
+        else:
+            cli_args.extend(args)
         
         try:
             proc = subprocess.run(
@@ -214,5 +220,12 @@ class KeepassxcDatabase:
 
         stderr = proc.stderr.decode("utf-8")
         stdout = proc.stdout.decode("utf-8")
+        
+        # Debug output for troubleshooting
+        print(f"DEBUG: CLI command: {' '.join(cli_args)}")
+        print(f"DEBUG: Return code: {proc.returncode}")
+        print(f"DEBUG: Stderr: {stderr}")
+        print(f"DEBUG: Stdout: {stdout}")
+        print(f"DEBUG: Key file path: {self.key_file_path}")
         
         return (stderr, stdout, proc.returncode)

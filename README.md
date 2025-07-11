@@ -29,6 +29,8 @@ https://github.com/pbkhrv/ulauncher-keepassxc
 
 - `Inactivity lock timeout`: forces you to re-enter the passphrase after you haven't used the extension for a while. By default it's set to 600 seconds (10 minutes). If you'd rather not re-enter it, you can set the value to 0, but that's probably not a great idea. NOTE: The cached passphrase is only stored in memory, so you'll need to re-enter it if you reboot your computer or restart Ulauncher.
 
+- `Key file path (optional)`: path to the key file for database authentication. Leave empty to use password-only authentication. If specified, the database will be unlocked using both the password and the key file.
+
 ## Usage
 
 Open Ulauncher and type in "kp " to start the extension. If your password database is locked with a passphrase, it'll ask you to enter it:
