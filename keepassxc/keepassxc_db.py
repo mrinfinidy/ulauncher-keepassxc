@@ -46,15 +46,17 @@ class KeepassxcDatabase:
         self.cli_checked = False
         self.path = None
         self.path_checked = False
+        self.key_file_path = None
         self.passphrase = None
         self.passphrase_expires_at = None
         self.inactivity_lock_timeout = 0
 
-    def initialize(self, path: str, inactivity_lock_timeout: int) -> None:
+    def initialize(self, path: str, inactivity_lock_timeout: int, key_file_path: str = None) -> None:
         """
         Check that
         - we can call invoke the CLI
         - database file at specified path exists
+        - key file exists if specified
 
         Don't call more than once.
         """
@@ -75,6 +77,16 @@ class KeepassxcDatabase:
                 self.path_checked = True
             else:
                 raise KeepassxcFileNotFoundError()
+
+        # Set key file path if provided
+        if key_file_path:
+            expanded_key_file_path = os.path.expanduser(key_file_path)
+            if os.path.exists(expanded_key_file_path):
+                self.key_file_path = expanded_key_file_path
+            else:
+                raise KeepassxcFileNotFoundError(f"Key file not found: {expanded_key_file_path}")
+        else:
+            self.key_file_path = None
 
     def change_path(self, new_path: str) -> None:
         """
@@ -111,8 +123,8 @@ class KeepassxcDatabase:
         save the passphrase if successful
         """
         self.passphrase = passphrase
-        err, _ = self.run_cli("ls", "-q", self.path)
-        if err:
+        err, out, return_code = self.run_cli("ls", "-q", self.path)
+        if return_code != 0:
             self.passphrase = None
             return False
         return True
@@ -124,8 +136,8 @@ class KeepassxcDatabase:
         if self.is_passphrase_needed():
             raise KeepassxcLockedDbError()
 
-        (err, out) = self.run_cli("search", "-q", self.path, query)
-        if err:
+        (err, out, return_code) = self.run_cli("search", "-q", self.path, query)
+        if return_code != 0:
             if "No results for that" in err:
                 return []
             raise KeepassxcCliError(err)
@@ -153,8 +165,8 @@ class KeepassxcDatabase:
 
         attrs = dict()
         for attr in ["UserName", "Password", "URL", "Notes"]:
-            (err, out) = self.run_cli("show", "-q", "-a", attr, self.path, f"/{entry}")
-            if err:
+            (err, out, return_code) = self.run_cli("show", "-q", "-a", attr, self.path, f"/{entry}")
+            if return_code != 0:
                 raise KeepassxcCliError(err)
             attrs[attr] = out.strip("\n")
         return attrs
@@ -171,13 +183,22 @@ class KeepassxcDatabase:
         except OSError:
             return False
 
-    def run_cli(self, *args) -> Tuple[str, str]:
+    def run_cli(self, *args) -> Tuple[str, str, int]:
         """
         Execute the KeePassXC CLI with given args, parse output and handle errors
+        Returns (stderr, stdout, return_code)
         """
+        cli_args = [self.cli]
+        
+        # Add key file parameter if available
+        if self.key_file_path:
+            cli_args.extend(["-k", self.key_file_path])
+        
+        cli_args.extend(args)
+        
         try:
             proc = subprocess.run(
-                [self.cli, *args],
+                cli_args,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 input=bytes(self.passphrase, "utf-8"),
@@ -191,4 +212,7 @@ class KeepassxcDatabase:
                 seconds=self.inactivity_lock_timeout
             )
 
-        return (proc.stderr.decode("utf-8"), proc.stdout.decode("utf-8"))
+        stderr = proc.stderr.decode("utf-8")
+        stdout = proc.stdout.decode("utf-8")
+        
+        return (stderr, stdout, proc.returncode)

@@ -85,16 +85,20 @@ def keepassxc_cli_error(message: str) -> BaseAction:
     )
 
 
-def ask_to_enter_passphrase(db_path: str) -> BaseAction:
+def ask_to_enter_passphrase(db_path: str, key_file_path: str = None) -> BaseAction:
     """
     Ask user to enter the passphrase to unlock database
     """
+    description = db_path
+    if key_file_path:
+        description += f" (with key file: {key_file_path})"
+    
     return RenderResultListAction(
         [
             ExtensionResultItem(
                 icon="images/keepassxc-search-locked.svg",
                 name="Unlock KeePassXC database",
-                description=db_path,
+                description=description,
                 # FUTURE replace with call_object_method
                 on_enter=ExtensionCustomAction({"action": "read_passphrase"}),
             )

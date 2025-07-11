@@ -94,6 +94,12 @@ class KeepassxcExtension(Extension):
         """
         return int(self.preferences["inactivity-lock-timeout"])
 
+    def get_key_file_path(self) -> str:
+        """
+        Get the key file path from preferences
+        """
+        return self.preferences.get("key-file-path", "")
+
     def set_active_entry(self, keyword: str, entry: str) -> None:
         """
         Save the search keyword and full name of the entry that user activated
@@ -164,11 +170,16 @@ class KeywordQueryEventListener(EventListener):
     def on_event(self, event, extension) -> BaseAction:
         try:
             self.keepassxc_db.initialize(
-                extension.get_db_path(), extension.get_inactivity_lock_timeout()
+                extension.get_db_path(), 
+                extension.get_inactivity_lock_timeout(),
+                extension.get_key_file_path()
             )
 
             if self.keepassxc_db.is_passphrase_needed():
-                return render.ask_to_enter_passphrase(extension.get_db_path())
+                return render.ask_to_enter_passphrase(
+                    extension.get_db_path(), 
+                    extension.get_key_file_path()
+                )
             return self.process_keyword_query(event, extension)
         except KeepassxcCliNotFoundError:
             return render.cli_not_found_error()
@@ -276,3 +287,15 @@ class PreferencesUpdateEventListener(EventListener):
                 extension.database_path_changed()
             elif event.id == "inactivity-lock-timeout":
                 self.keepassxc_db.change_inactivity_lock_timeout(int(event.new_value))
+            elif event.id == "key-file-path":
+                # Re-initialize the database with the new key file path
+                try:
+                    self.keepassxc_db.initialize(
+                        extension.get_db_path(),
+                        extension.get_inactivity_lock_timeout(),
+                        event.new_value
+                    )
+                except KeepassxcFileNotFoundError:
+                    # Key file not found, but don't raise an error here
+                    # The user will see the error when they try to use the extension
+                    pass

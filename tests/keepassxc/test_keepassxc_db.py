@@ -6,7 +6,7 @@ from keepassxc import keepassxc_db as kpdb
 @pytest.fixture
 def test_db():
     db = kpdb.KeepassxcDatabase()
-    db.initialize("tests/data/test.kdbx", 0)
+    db.initialize("tests/data/test.kdbx", 0, None)
     return db
 
 
@@ -23,13 +23,13 @@ def test_unlock(test_db):
 def test_db_not_found():
     db = kpdb.KeepassxcDatabase()
     with pytest.raises(kpdb.KeepassxcFileNotFoundError):
-        db.initialize("test/data/no_such_file", 0)
+        db.initialize("test/data/no_such_file", 0, None)
 
 
 def test_inactivity_lock():
     TIMEOUT = 1
     test_db = kpdb.KeepassxcDatabase()
-    test_db.initialize("tests/data/test.kdbx", TIMEOUT)
+    test_db.initialize("tests/data/test.kdbx", TIMEOUT, None)
     assert test_db.verify_and_set_passphrase("right passphrase")
     # dont need passphrase immediately after unlocking
     assert not test_db.is_passphrase_needed()
@@ -81,3 +81,22 @@ def test_lock_unlock_after_path_change(test_db):
     # unlock 2
     test_db.verify_and_set_passphrase("right passphrase2")
     assert not test_db.is_passphrase_needed()
+
+
+def test_initialize_with_key_file():
+    """Test that database can be initialized with a key file path"""
+    db = kpdb.KeepassxcDatabase()
+    # Test with empty key file path (should work)
+    db.initialize("tests/data/test.kdbx", 0, "")
+    assert db.key_file_path is None
+    
+    # Test with None key file path (should work)
+    db.initialize("tests/data/test.kdbx", 0, None)
+    assert db.key_file_path is None
+
+
+def test_initialize_with_invalid_key_file():
+    """Test that database initialization fails with invalid key file path"""
+    db = kpdb.KeepassxcDatabase()
+    with pytest.raises(kpdb.KeepassxcFileNotFoundError):
+        db.initialize("tests/data/test.kdbx", 0, "nonexistent_key_file.key")

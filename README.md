@@ -7,6 +7,7 @@ A [Ulauncher](https://ulauncher.io/) extension to search your [KeePassXC](https:
 - Quickly search through the database entries by name, and copy passwords/usernames/URLs to the clipboard
 - Work with any file (.kdbx etc) that can be accessed by the KeePassXC itself via the `keepassxc-cli` command line tool
 - Support files locked with a passphrase. The extension asks for the passphrase and stores it in memory for a configurable amount of time
+- Support for key file authentication (password + key file combination)
 - Doesn't require the KeePassXC app to be running
 
 ## Requirements
